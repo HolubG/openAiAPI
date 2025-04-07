@@ -36,6 +36,7 @@ export const APItest = (client) => {
       // formatovanie odpovede
       const responseFormating = responseObject(response);
 
+      console.log(responseFormating)
       //odoslanie http odpovede
       res.json(responseFormating);
     } catch (error) {
