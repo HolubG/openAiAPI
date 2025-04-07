@@ -1,27 +1,62 @@
-// server.mjs
-import dotenv from "dotenv";
-import OpenAI from "openai";
-import express from "express";
-import { APItest } from "./APImain.mjs";
+import dotenv from 'dotenv'
+import OpenAI from 'openai'
+import express from 'express'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { createAPIResponse } from './APIResponse.mjs'
+import { responseObject } from './responseFormat.mjs'
+import { handleAPIerror } from './errorHandling.mjs'
 
-dotenv.config();
+dotenv.config()
 
-const app = express();
-const port = 3000;
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-app.use(express.json());
+const app = express()
+const port = 3500
 
-console.log(
-  "OPENAI_API_KEY:",
-  process.env.OPENAI_API_KEY ? "Present" : "Not Found"
-);
+app.use(express.json())
+app.use(express.static(path.join(__dirname, 'client')))
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+    apiKey: process.env.OPENAI_API_KEY,
+})
 
-app.post("/getResponse", APItest(client));
+app.post('/httpCommunication', async (req, res) => {
+    const { message } = req.body
+
+    if (!message || typeof message !== 'string') {
+        return res.status(400).json({
+            status: 'error',
+            message: "Invalid input. 'message' must be a non-empty string.",
+            data: null,
+        })
+    }
+
+    if (message) {
+        try {
+            const response = await createAPIResponse(client, message)
+            const responseFormating = responseObject(response)
+
+            res.json({
+                status: 'success',
+                message: 'Message received successfully.',
+                data: {
+                    receivedMessage: message,
+                    aiResponse: responseFormating,
+                },
+            })
+        } catch (error) {
+            handleAPIerror(error, res)
+        }
+    }
+})
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'index.html'))
+})
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+    console.log(`Server is running on port ${port}`)
+    console.log(`Open http://localhost:${port} in your browser`)
+})
