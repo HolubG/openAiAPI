@@ -115,7 +115,6 @@
             justify-content: center;
             padding: 20px;
         }
-
     </style>
 </head>
 
@@ -141,18 +140,17 @@
     </div>
 
     <script>
+        // Spusti sa po načítaní celej stránky, aby boli DOM prvky dostupné, sprístupnenie html elementov pre js
         document.addEventListener('DOMContentLoaded', () => {
-            const messageInput = document.getElementById('messageInput');
-            const sendButton = document.getElementById('sendButton');
-            const statusMessage = document.getElementById('statusMessage');
-            const responseContainer = document.getElementById('responseContainer');
-            const aiResponseContainer = document.getElementById('aiResponseContainer');
-            const loadingIndicator = document.getElementById('loadingIndicator');
+            const messageInput = document.getElementById('messageInput');      // Textarea pre vstup
+            const sendButton = document.getElementById('sendButton');          // Tlačidlo Odoslať
+            const statusMessage = document.getElementById('statusMessage');    // Stavové hlásenie
+            const responseContainer = document.getElementById('responseContainer'); // Kontajner pre odpoveď
+            const aiResponseContainer = document.getElementById('aiResponseContainer'); // Kontajner pre AI odpoveď
+            const loadingIndicator = document.getElementById('loadingIndicator'); // Indikátor načítania
 
-
+            // Po kliknutí na tlačidlo alebo Ctrl+Enter odošli správu
             sendButton.addEventListener('click', sendMessage);
-
-
             messageInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && e.ctrlKey) {
                     sendMessage();
@@ -160,68 +158,71 @@
             });
 
             function sendMessage() {
-                const message = messageInput.value.trim();
+                const message = messageInput.value.trim(); // Odstránenie prázdnych znakov na začiatku/konci
 
+                // Ak je správa prázdna, zobraz chybu a skonči
                 if (!message) {
-                    showStatus('Please enter a message', 'error');
+                    showStatus('Neni sprava', 'error');
                     return;
                 }
 
-
+                // Deaktivácia UI prvkov počas načítania
                 sendButton.disabled = true;
                 sendButton.textContent = 'Odosielam...';
-
-  
                 loadingIndicator.classList.remove('hidden');
 
+                // Odoslanie HTTP POST požiadavky na server
                 fetch('/httpCommunication', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ message })
                 })
                     .then(response => {
+                        // Ak server vráti chybu HTTP, vyhoď výnimku
                         if (!response.ok) {
                             throw new Error(`HTTP error! Status: ${response.status}`);
                         }
-                        return response.json();
+                        return response.json(); // Parsovanie JSON odpovede
                     })
                     .then(data => {
-
+                        // Úspešné spracovanie odpovede
                         showStatus('Message processed successfully!', 'success');
 
+                        // Zobrazenie detailov odpovede
                         responseContainer.innerHTML = `
-                        <h3>Request Details:</h3>
+                        <h3>Detail:</h3>
                         <p><strong>Status:</strong> ${data.status}</p>
-                        <p><strong>Message:</strong> ${data.message}</p>
-                        <p><strong>Sent Text:</strong> ${data.data.receivedMessage}</p>
+                        <p><strong>Sprava:</strong> ${data.message}</p>
+                        <p><strong>Odoslany text:</strong> ${data.data.receivedMessage}</p>
                     `;
 
+                        // Ak existuje odpoveď od AI, zobraz ju
                         if (data.data.aiResponse) {
                             aiResponseContainer.classList.remove('hidden');
                             aiResponseContainer.innerHTML = `
-                            <h3>AI Response:</h3>
+                            <h3>AI Odpoved:</h3>
                             <div>${formatAIResponse(data.data.aiResponse.data.content)}</div>
                         `;
                         } else {
                             aiResponseContainer.classList.add('hidden');
                         }
-
-                        // Clear input
-                        // messageInput.value = '';
                     })
                     .catch(error => {
+                        // Zobrazenie chybového hlásenia pri zlyhaní siete či servera
                         showStatus(`Error: ${error.message}`, 'error');
                         console.error('Error:', error);
                     })
                     .finally(() => {
+                        // Obnovenie UI prvkov bez ohľadu na výsledok
                         sendButton.disabled = false;
-                        sendButton.textContent = 'Send';
+                        sendButton.textContent = 'Odoslane';
                         loadingIndicator.classList.add('hidden');
                     });
             }
 
+            // Prevádza nový riadok na <br> alebo formátuje JSON pre prehľadnosť
             function formatAIResponse(response) {
                 if (typeof response === 'string') {
                     return response.replace(/\n/g, '<br>');
@@ -230,12 +231,13 @@
                 } else if (typeof response === 'object') {
                     return `<pre>${JSON.stringify(response, null, 2)}</pre>`;
                 }
-                return 'No response content';
+                return 'Bez odpovede';
             }
 
+            // Zobrazí stavové hlásenie a po 5 s ho automaticky skryje
             function showStatus(message, type) {
                 statusMessage.textContent = message;
-                statusMessage.className = `status ${type}`;
+                statusMessage.className = `status ${type}`; // prirad CSS triedu success alebo error
                 statusMessage.classList.remove('hidden');
 
                 setTimeout(() => {
